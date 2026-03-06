@@ -73,4 +73,4 @@ jobs:
         with:
           name: npm-package
 
-      - run: NODE_AUTH_TOKEN="" npm publish ./*.tgz --access public --provenance
+      - run: npm publish ./*.tgz --access public --provenance
