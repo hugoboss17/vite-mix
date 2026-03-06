@@ -19,24 +19,19 @@ npm install laravel-vite-mix
 After installing, use:
 
 ```bash
-mix dev
-mix build
+mix --development
+mix --production
 ```
 
 Options:
 
 ```bash
-mix dev --config mix.config.mjs
-mix build --config mix.config.mjs
+mix --development --config mix.config.mjs
+mix --production --config mix.config.mjs
 ```
 
 Default config path is `mix.config.mjs`.
 
-## Security
-
-- Install from the npm registry package only.
-- Prefer provenance-backed releases and verify checksums/provenance before production rollout.
-- `mix.config.mjs` is executed as code. Only run builds in trusted repositories.
 
 ## Config format
 

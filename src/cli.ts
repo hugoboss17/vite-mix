@@ -10,8 +10,8 @@ import { build as viteBuild } from "vite";
 function usage() {
   console.log(`
 Usage:
-  mix dev [--config mix.config.mjs]
-  mix build [--config mix.config.mjs]
+  mix --development [--config mix.config.mjs]
+  mix --production [--config mix.config.mjs]
 
 Default config file: mix.config.mjs
 `);
@@ -81,7 +81,7 @@ async function addCombineEntriesToViteInput(graph: MixGraph, mode: "development"
 
 async function main() {
   const { cmd, configPath } = parseArgs();
-  if (!cmd || !["dev", "build"].includes(cmd)) {
+  if (!cmd || !["--development", "--production"].includes(cmd)) {
     usage();
     process.exit(1);
   }
@@ -89,7 +89,7 @@ async function main() {
   const graph = await loadUserConfig(configPath);
   generateCombineEntries(graph);
 
-  if (cmd === "dev") {
+  if (cmd === "--development") {
     const { runViteDev } = await import("./driver-vite.js");
     await runViteDev(graph);
     return;

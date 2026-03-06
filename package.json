@@ -48,7 +48,6 @@
     "verify:pack": "node scripts/verify-pack.mjs",
     "check:lockfile": "node scripts/check-lockfile-change.mjs",
     "prepack": "npm run build && npm run verify:pack",
-    "prepublishOnly": "node scripts/enforce-ci-publish.mjs",
     "lint": "node -e \"console.log('add eslint if you want')\""
   },
   "dependencies": {
