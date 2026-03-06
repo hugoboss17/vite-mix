@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/hugoboss17/laravel-vite-mix/compare/laravel-vite-mix-v0.1.3...laravel-vite-mix-v0.2.0) (2026-03-06)
+
+
+### Features
+
+* update to node24 to solve auth issue ([8444846](https://github.com/hugoboss17/laravel-vite-mix/commit/8444846f1c81cf341aadd5979b6667df3790fef3))
+* update to node24 to solve auth issue ([88846ef](https://github.com/hugoboss17/laravel-vite-mix/commit/88846eff468c2156a0351ea2944d89359064fa77))
+
 ## [0.1.3](https://github.com/hugoboss17/laravel-vite-mix/compare/laravel-vite-mix-v0.1.2...laravel-vite-mix-v0.1.3) (2026-03-06)
 
 
