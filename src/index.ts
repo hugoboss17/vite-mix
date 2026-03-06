@@ -27,7 +27,9 @@ export type MixGraph = {
 };
 
 function normalizePublicPath(p: string) {
-  return p.replace(/\/+$/, "");
+  let end = p.length;
+  while (end > 0 && p[end - 1] === "/") end--;
+  return p.slice(0, end);
 }
 
 export class Mix {
