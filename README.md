@@ -101,4 +101,4 @@ npm run dev      # dev server
 
 ## Contributing
 
-Feel free to open issues or pull requests.
+See [CONTRIBUTING.md](CONTRIBUTING.md).

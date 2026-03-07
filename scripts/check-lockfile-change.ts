@@ -1,28 +1,35 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-const DEP_FIELDS = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
+type DependencyFields = {
+  dependencies: Record<string, string>;
+  devDependencies: Record<string, string>;
+  optionalDependencies: Record<string, string>;
+  peerDependencies: Record<string, string>;
+};
 
-function run(command, args) {
+const DEP_FIELDS = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"] as const;
+
+function run(command: string, args: string[]): string {
   return execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 }
 
-function fail(message) {
+function fail(message: string): never {
   console.error(`check:lockfile failed: ${message}`);
   process.exit(1);
 }
 
-function normalizeDeps(pkg) {
-  const normalized = {};
+function normalizeDeps(pkg: Record<string, unknown>): DependencyFields {
+  const normalized = {} as DependencyFields;
   for (const field of DEP_FIELDS) {
-    normalized[field] = pkg[field] ?? {};
+    normalized[field] = (pkg[field] ?? {}) as Record<string, string>;
   }
   return normalized;
 }
 
-function parseJson(raw, where) {
+function parseJson(raw: string, where: string): Record<string, unknown> {
   try {
-    return JSON.parse(raw);
+    return JSON.parse(raw) as Record<string, unknown>;
   } catch (error) {
     fail(`could not parse ${where}: ${error instanceof Error ? error.message : String(error)}`);
   }

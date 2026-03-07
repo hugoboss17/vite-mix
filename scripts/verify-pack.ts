@@ -6,26 +6,34 @@ import path from "node:path";
 const ALLOWED_EXACT = new Set(["package.json", "README.md", "LICENSE"]);
 const ALLOWED_PREFIX = ["dist/"];
 
-function fail(message) {
+function fail(message: string): never {
   console.error(`verify:pack failed: ${message}`);
   process.exit(1);
 }
 
-function parsePackJson(raw) {
+interface PackFile {
+  path: string;
+}
+
+interface PackResult {
+  files?: PackFile[];
+}
+
+function parsePackJson(raw: string): PackResult {
   try {
-    const parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) {
       fail("unexpected npm pack --json output.");
     }
-    return parsed[0];
+    return (parsed as PackResult[])[0];
   } catch (error) {
     fail(`unable to parse npm pack output: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
-function isAllowed(path) {
-  if (ALLOWED_EXACT.has(path)) return true;
-  return ALLOWED_PREFIX.some((prefix) => path.startsWith(prefix));
+function isAllowed(filePath: string): boolean {
+  if (ALLOWED_EXACT.has(filePath)) return true;
+  return ALLOWED_PREFIX.some((prefix) => filePath.startsWith(prefix));
 }
 
 const raw = execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
@@ -49,12 +57,12 @@ const files = (packResult.files ?? []).map((entry) => entry.path).filter(Boolean
 
 if (!files.length) fail("no files discovered in package tarball.");
 
-const unexpected = files.filter((path) => !isAllowed(path));
+const unexpected = files.filter((filePath) => !isAllowed(filePath));
 if (unexpected.length > 0) {
   fail(`unexpected files in tarball: ${unexpected.join(", ")}`);
 }
 
-const hasDistFiles = files.some((path) => path.startsWith("dist/"));
+const hasDistFiles = files.some((filePath) => filePath.startsWith("dist/"));
 if (!hasDistFiles) {
   fail("tarball does not include dist/ artifacts.");
 }
