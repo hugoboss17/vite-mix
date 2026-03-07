@@ -2,11 +2,12 @@
 
 [![npm version](https://img.shields.io/npm/v/laravel-vite-mix)](https://www.npmjs.com/package/laravel-vite-mix)
 [![CI](https://github.com/hugoboss17/laravel-vite-mix/actions/workflows/ci.yml/badge.svg)](https://github.com/hugoboss17/laravel-vite-mix/actions/workflows/ci.yml)
+[![npm downloads](https://img.shields.io/npm/dt/laravel-vite-mix)](https://www.npmjs.com/package/laravel-vite-mix)
 [![License: ISC](https://img.shields.io/badge/license-ISC-blue)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hugoboss17/laravel-vite-mix/badge)](https://scorecard.dev/viewer/?uri=github.com/hugoboss17/laravel-vite-mix)
 [![SLSA Level 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
 [![Socket Badge](https://socket.dev/api/badge/npm/package/laravel-vite-mix)](https://socket.dev/npm/package/laravel-vite-mix)
-[![npm downloads](https://img.shields.io/npm/dt/laravel-vite-mix)](https://www.npmjs.com/package/laravel-vite-mix)
+[![codecov](https://codecov.io/gh/hugoboss17/laravel-vite-mix/graph/badge.svg)](https://codecov.io/gh/hugoboss17/laravel-vite-mix)
 
 Use Vite with a Laravel Mix-like API.
 

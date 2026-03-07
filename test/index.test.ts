@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isFilePath, mix, viteConfigFromGraph } from "../dist/index.js";
+import { isFilePath, mix, viteConfigFromGraph } from "../src/index.ts";
 
 describe("isFilePath", () => {
   it("detects file-like paths", () => {
@@ -59,6 +59,11 @@ describe("mix() builder", () => {
 
     expect(graph.js).toHaveLength(2);
     expect(graph.js[1].vue).toEqual({ version: 3 });
+  });
+
+  it("vue() on empty js list does nothing", () => {
+    const graph = mix().vue({ version: 3 }).toGraph();
+    expect(graph.js).toHaveLength(0);
   });
 
   it("autoload() merges multiple calls", () => {

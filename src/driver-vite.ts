@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
-import { createServer, type InlineConfig } from "vite";
+import { type InlineConfig } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import inject from "@rollup/plugin-inject";
 import type { MixGraph } from "./index.js";
@@ -202,10 +202,4 @@ export async function viteConfigFromGraph(graph: MixGraph, mode: "development" |
       strictPort: true,
     },
   };
-}
-
-export async function runViteDev(graph: MixGraph) {
-  const server = await createServer(await viteConfigFromGraph(graph, "development"));
-  await server.listen();
-  server.printUrls();
 }
