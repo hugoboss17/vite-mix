@@ -1,0 +1,59 @@
+name: Generate PR Description
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+  models: read
+
+jobs:
+  generate:
+    name: Generate PR description
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.body == '' || contains(github.event.pull_request.body, '<!-- ai-generated -->')
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: Generate and apply description
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          DIFF=$(git diff "origin/$BASE_REF"...HEAD -- . ':(exclude)package-lock.json' | head -c 12000)
+          COMMITS=$(git log "origin/$BASE_REF"..HEAD --oneline)
+
+          BODY=$(curl -sf -X POST \
+            https://models.inference.ai.azure.com/chat/completions \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg diff "$DIFF" \
+              --arg commits "$COMMITS" \
+              '{
+                model: "gpt-4o-mini",
+                messages: [
+                  {
+                    role: "system",
+                    content: "You write concise GitHub PR descriptions in markdown. Summarise what changed and why. Use bullet points. No fluff."
+                  },
+                  {
+                    role: "user",
+                    content: "Write a PR description for these changes.\n\nCommits:\n\($commits)\n\nDiff:\n\($diff)"
+                  }
+                ],
+                max_tokens: 600,
+                temperature: 0.3
+              }')" | jq -r '.choices[0].message.content')
+
+          gh pr edit "$PR_NUMBER" --body "$BODY"$'\n\n<!-- ai-generated -->'
