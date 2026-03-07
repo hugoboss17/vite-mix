@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/hugoboss17/laravel-vite-mix/compare/laravel-vite-mix-v0.2.0...laravel-vite-mix-v0.3.0) (2026-03-07)
+
+
+### Features
+
+* change everything to ts, add contributing.md, add tests to CI ([80be738](https://github.com/hugoboss17/laravel-vite-mix/commit/80be7382fadc4c5558c32c1983a78695c69bfc9c))
+* change everything to ts, add contributing.md, add tests to CI ([85b87d6](https://github.com/hugoboss17/laravel-vite-mix/commit/85b87d67fc7350ea70af98cd3ef1908bb5dace73))
+
 ## [0.2.0](https://github.com/hugoboss17/laravel-vite-mix/compare/laravel-vite-mix-v0.1.3...laravel-vite-mix-v0.2.0) (2026-03-06)
 
 
