@@ -28,7 +28,7 @@ jobs:
         run: npm ci
 
       - name: Test
-        run: npm run build && node --test --test-coverage --test-coverage-reporter=lcov --test-coverage-reporter-destination=coverage/lcov.info
+        run: npm run test:coverage
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
