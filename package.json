@@ -48,8 +48,8 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "test": "npm run build && vitest run",
-    "test:coverage": "npm run build && vitest run --coverage",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "verify:pack": "node scripts/verify-pack.ts",
     "check:lockfile": "node scripts/check-lockfile-change.ts",
     "prepack": "npm run build && npm run verify:pack",

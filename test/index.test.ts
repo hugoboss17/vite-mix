@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isFilePath, mix, viteConfigFromGraph } from "../dist/index.js";
+import { isFilePath, mix, viteConfigFromGraph } from "../src/index.ts";
 
 describe("isFilePath", () => {
   it("detects file-like paths", () => {
