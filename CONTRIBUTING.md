@@ -4,11 +4,18 @@ Thank you for your interest in contributing to `laravel-vite-mix`.
 
 ## Getting started
 
-```bash
-git clone https://github.com/hugoboss17/laravel-vite-mix.git
-cd laravel-vite-mix
-npm install
-```
+1. Install [pre-commit](https://pre-commit.com/#install) if you don't have it:
+   ```bash
+   brew install pre-commit
+   ```
+
+2. Clone and install dependencies:
+   ```bash
+   git clone https://github.com/hugoboss17/laravel-vite-mix.git
+   cd laravel-vite-mix
+   npm install
+   ```
+   `npm install` will automatically activate the git hooks via the `prepare` script. If you had `pre-commit` installed before running `npm install`, run `pre-commit install` once manually.
 
 ## Development
 

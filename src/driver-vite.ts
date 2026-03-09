@@ -1,6 +1,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import { type InlineConfig, type Plugin } from "vite";
+import vue from "@vitejs/plugin-vue";
 import type { MixGraph } from "./index.js";
 
 function relKeyFromResources(file: string) {
@@ -83,6 +84,14 @@ function webpackCompatResolvePlugin() {
 }
 
 function autoloadPlugin(identMap: Record<string, string>): Plugin {
+  const patterns = Object.entries(identMap).map(([ident, module]) => ({
+    ident,
+    module,
+    localName: ident.startsWith("window.") ? ident.slice(7) : ident,
+    isWindow: ident.startsWith("window."),
+    regex: ident.startsWith("window.") ? null : new RegExp(`(?<![.\\w$])${escapeRegExp(ident)}(?![\\w$])`),
+  }));
+
   return {
     name: "mix-inject",
     enforce: "post" as const,
@@ -93,9 +102,7 @@ function autoloadPlugin(identMap: Record<string, string>): Plugin {
       const toAdd: string[] = [];
       const seen = new Set<string>();
 
-      for (const [ident, module] of Object.entries(identMap)) {
-        const isWindowIdent = ident.startsWith("window.");
-        const localName = isWindowIdent ? ident.slice(7) : ident;
+      for (const { ident, module, localName, isWindow, regex } of patterns) {
         if (seen.has(localName)) continue;
 
         if (
@@ -106,12 +113,7 @@ function autoloadPlugin(identMap: Record<string, string>): Plugin {
         )
           continue;
 
-        let used = false;
-        if (isWindowIdent) {
-          used = code.includes(ident);
-        } else {
-          used = new RegExp(`(?<![.\\w$])${escapeRegExp(ident)}(?![\\w$])`).test(code);
-        }
+        const used = isWindow ? code.includes(ident) : regex!.test(code);
 
         if (used) {
           toAdd.push(`import ${localName} from '${module}';`);
@@ -138,8 +140,8 @@ function staticCopyPlugin(targets: Array<{ src: string; dest: string; rename?: s
           await fs.promises.mkdir(absDestDir, { recursive: true });
           await fs.promises.copyFile(src, path.join(absDestDir, filename));
         }
-      } catch {
-        // Source may not exist yet during dev server startup
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       }
     }
   }
@@ -213,11 +215,9 @@ export async function viteConfigFromGraph(graph: MixGraph, mode: "development" |
     Object.values(graph.autoload).some((arr) => arr.includes("$") || arr.includes("jQuery") || arr.includes("window.jQuery")) ||
     Object.keys(graph.autoload).some((k) => k.toLowerCase() === "jquery");
 
-  const plugins: any[] = [webpackCompatResolvePlugin()];
+  const plugins: Plugin[] = [webpackCompatResolvePlugin()];
 
-  const wantsVue3 = graph.js.some((e) => e.vue?.version === 3);
-  if (wantsVue3) {
-    const { default: vue } = await import("@vitejs/plugin-vue");
+  if (graph.js.some((e) => !!e.vue)) {
     plugins.push(vue());
   }
 

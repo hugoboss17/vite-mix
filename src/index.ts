@@ -1,6 +1,6 @@
 import path from "node:path";
 
-export type VueOptions = { version: 2 | 3 };
+export type VueOptions = { version: 3 };
 export type MixOptions = { processCssUrls?: boolean };
 
 export type CopyTarget = { src: string; dest: string; rename?: string };

@@ -23,7 +23,6 @@
     "url": "https://github.com/hugoboss17/laravel-vite-mix/issues"
   },
   "type": "module",
-  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -41,8 +40,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.js"
     }
   },
   "scripts": {
@@ -53,7 +51,8 @@
     "verify:pack": "node scripts/verify-pack.ts",
     "check:lockfile": "node scripts/check-lockfile-change.ts",
     "prepack": "npm run build && npm run verify:pack",
-    "lint": "node -e \"console.log('add eslint if you want')\""
+    "lint": "node -e \"console.log('add eslint if you want')\"",
+    "prepare": "pre-commit install || true"
   },
   "dependencies": {},
   "peerDependencies": {
