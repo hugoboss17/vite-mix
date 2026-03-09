@@ -1,8 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
-import { type InlineConfig } from "vite";
-import { viteStaticCopy } from "vite-plugin-static-copy";
-import inject from "@rollup/plugin-inject";
+import { type InlineConfig, type Plugin } from "vite";
 import type { MixGraph } from "./index.js";
 
 function relKeyFromResources(file: string) {
@@ -84,6 +82,84 @@ function webpackCompatResolvePlugin() {
   };
 }
 
+function autoloadPlugin(identMap: Record<string, string>): Plugin {
+  return {
+    name: "mix-inject",
+    enforce: "post" as const,
+    transform(code, id) {
+      if (id.includes("node_modules")) return;
+      if (!/\.[jt]sx?$/.test(id.split("?")[0])) return;
+
+      const toAdd: string[] = [];
+      const seen = new Set<string>();
+
+      for (const [ident, module] of Object.entries(identMap)) {
+        const isWindowIdent = ident.startsWith("window.");
+        const localName = isWindowIdent ? ident.slice(7) : ident;
+        if (seen.has(localName)) continue;
+
+        if (
+          code.includes(`from '${module}'`) ||
+          code.includes(`from "${module}"`) ||
+          code.includes(`require('${module}')`) ||
+          code.includes(`require("${module}")`)
+        )
+          continue;
+
+        let used = false;
+        if (isWindowIdent) {
+          used = code.includes(ident);
+        } else {
+          used = new RegExp(`(?<![.\\w$])${escapeRegExp(ident)}(?![\\w$])`).test(code);
+        }
+
+        if (used) {
+          toAdd.push(`import ${localName} from '${module}';`);
+          seen.add(localName);
+        }
+      }
+
+      if (!toAdd.length) return;
+      return { code: toAdd.join("\n") + "\n" + code, map: null };
+    },
+  };
+}
+
+function staticCopyPlugin(targets: Array<{ src: string; dest: string; rename?: string }>, publicPath: string): Plugin {
+  async function performCopy(): Promise<void> {
+    for (const { src, dest, rename } of targets) {
+      const absDestDir = path.resolve(publicPath, dest);
+      try {
+        if (src.endsWith("/**/*")) {
+          const srcDir = src.slice(0, -5);
+          await fs.promises.cp(srcDir, absDestDir, { recursive: true });
+        } else {
+          const filename = rename ?? path.basename(src);
+          await fs.promises.mkdir(absDestDir, { recursive: true });
+          await fs.promises.copyFile(src, path.join(absDestDir, filename));
+        }
+      } catch {
+        // Source may not exist yet during dev server startup
+      }
+    }
+  }
+
+  return {
+    name: "mix-static-copy",
+    async buildStart() {
+      await performCopy();
+    },
+    async closeBundle() {
+      await performCopy();
+    },
+    configureServer(server) {
+      server.watcher.on("change", async () => {
+        await performCopy();
+      });
+    },
+  };
+}
+
 export async function viteConfigFromGraph(graph: MixGraph, mode: "development" | "production"): Promise<InlineConfig> {
   const isProd = mode === "production";
 
@@ -146,30 +222,23 @@ export async function viteConfigFromGraph(graph: MixGraph, mode: "development" |
   }
 
   if (wantsJquery) {
-    plugins.push({
-      ...(inject as any)({
+    plugins.push(
+      autoloadPlugin({
         $: "jquery",
         jQuery: "jquery",
         "window.jQuery": "jquery",
-      }),
-      enforce: "post",
-    });
+      })
+    );
   }
 
   if (staticTargets.length) {
-    plugins.push(
-      viteStaticCopy({
-        targets: staticTargets as any,
-      })
-    );
+    plugins.push(staticCopyPlugin(staticTargets, graph.publicPath));
   }
 
   return {
     resolve: {
       extensions: [".mjs", ".js", ".mts", ".ts", ".jsx", ".tsx", ".json", ".vue"],
-      alias: [
-        { find: /^~(.*)$/, replacement: "$1" },
-      ],
+      alias: [{ find: /^~(.*)$/, replacement: "$1" }],
     },
     plugins,
     build: {
