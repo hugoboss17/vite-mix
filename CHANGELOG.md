@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.6.0](https://github.com/hugoboss17/laravel-vite-mix/compare/laravel-vite-mix-v0.5.1...laravel-vite-mix-v0.6.0) (2026-03-09)
+
+
+### Features
+
+* drop CJS, minify output, improve code quality and dx ([ff6c740](https://github.com/hugoboss17/laravel-vite-mix/commit/ff6c7406da0b9b850646d255354070070ea9ff24))
+* drop CJS, minify output, improve code quality and dx ([fc7c0c0](https://github.com/hugoboss17/laravel-vite-mix/commit/fc7c0c0c051f6db1db05a8d85ff4efbf6ebc5ac5))
+* harden security, simplify API, add usage examples ([ae5a28b](https://github.com/hugoboss17/laravel-vite-mix/commit/ae5a28b67365195fb1779ff5a4a16cd50f944dd3))
+* rewrite staticCopyPlugin to use emitFile + dev middleware, fix PR description workflow ([b660b98](https://github.com/hugoboss17/laravel-vite-mix/commit/b660b98048c97fac9ea82c302ea15c2602bccd52))
+
+
+### Bug Fixes
+
+* CI blocked websites ([f49f630](https://github.com/hugoboss17/laravel-vite-mix/commit/f49f630bd03d810516398f02c503ebdf132adad8))
+* codecov ingest ([062c944](https://github.com/hugoboss17/laravel-vite-mix/commit/062c944b446f02f2a02f22f349ab3187f599ba53))
+* codecov ingest ([8b76e52](https://github.com/hugoboss17/laravel-vite-mix/commit/8b76e525103c6e8268e40ae3d7cf661d6d4302ff))
+* pr-description workflow always regenerates on new pushes ([48ae3b8](https://github.com/hugoboss17/laravel-vite-mix/commit/48ae3b8033cf135324ce7c4e6a0f2a71dc627124))
+
 ## [0.5.1](https://github.com/hugoboss17/laravel-vite-mix/compare/laravel-vite-mix-v0.5.0...laravel-vite-mix-v0.5.1) (2026-03-09)
 
 
