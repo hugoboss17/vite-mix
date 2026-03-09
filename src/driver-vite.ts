@@ -127,36 +127,93 @@ function autoloadPlugin(identMap: Record<string, string>): Plugin {
   };
 }
 
-function staticCopyPlugin(targets: Array<{ src: string; dest: string; rename?: string }>, publicPath: string): Plugin {
-  async function performCopy(): Promise<void> {
-    for (const { src, dest, rename } of targets) {
-      const absDestDir = path.resolve(publicPath, dest);
-      try {
-        if (src.endsWith("/**/*")) {
-          const srcDir = src.slice(0, -5);
-          await fs.promises.cp(srcDir, absDestDir, { recursive: true });
-        } else {
-          const filename = rename ?? path.basename(src);
-          await fs.promises.mkdir(absDestDir, { recursive: true });
-          await fs.promises.copyFile(src, path.join(absDestDir, filename));
-        }
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+const MIME_TYPES: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+  ".webp": "image/webp",
+  ".avif": "image/avif",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+  ".eot": "application/vnd.ms-fontobject",
+  ".otf": "font/otf",
+  ".css": "text/css",
+  ".js": "text/javascript",
+  ".json": "application/json",
+  ".txt": "text/plain",
+  ".pdf": "application/pdf",
+};
+
+function mimeType(file: string): string {
+  return MIME_TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream";
+}
+
+async function collectFiles(dir: string): Promise<Array<{ abs: string; rel: string }>> {
+  const out: Array<{ abs: string; rel: string }> = [];
+  for (const entry of await fs.promises.readdir(dir, { withFileTypes: true })) {
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      for (const f of await collectFiles(abs)) {
+        out.push({ abs: f.abs, rel: path.join(entry.name, f.rel) });
       }
+    } else {
+      out.push({ abs, rel: entry.name });
     }
   }
+  return out;
+}
 
+function outputPath(dest: string, filename: string): string {
+  return dest && dest !== "." ? `${dest}/${filename}` : filename;
+}
+
+function staticCopyPlugin(targets: Array<{ src: string; dest: string; rename?: string }>): Plugin {
   return {
     name: "mix-static-copy",
     async buildStart() {
-      await performCopy();
-    },
-    async closeBundle() {
-      await performCopy();
+      for (const { src, dest, rename } of targets) {
+        try {
+          if (src.endsWith("/**/*")) {
+            const srcDir = src.slice(0, -5);
+            for (const { abs, rel } of await collectFiles(srcDir)) {
+              this.emitFile({ type: "asset", fileName: outputPath(dest, rel), source: await fs.promises.readFile(abs) });
+            }
+          } else {
+            const filename = rename ?? path.basename(src);
+            this.emitFile({ type: "asset", fileName: outputPath(dest, filename), source: await fs.promises.readFile(src) });
+          }
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        }
+      }
     },
     configureServer(server) {
-      server.watcher.on("change", async () => {
-        await performCopy();
+      server.middlewares.use((req, res, next) => {
+        const url = req.url?.split("?")[0] ?? "";
+        for (const { src, dest, rename } of targets) {
+          if (src.endsWith("/**/*")) {
+            const prefix = `/${dest}/`;
+            if (url.startsWith(prefix)) {
+              fs.promises.readFile(path.join(src.slice(0, -5), url.slice(prefix.length)))
+                .then((content) => { res.setHeader("Content-Type", mimeType(url)); res.end(content); })
+                .catch(() => next());
+              return;
+            }
+          } else {
+            const filename = rename ?? path.basename(src);
+            if (url === `/${outputPath(dest, filename)}`) {
+              fs.promises.readFile(src)
+                .then((content) => { res.setHeader("Content-Type", mimeType(src)); res.end(content); })
+                .catch(() => next());
+              return;
+            }
+          }
+        }
+        next();
       });
     },
   };
@@ -232,7 +289,7 @@ export async function viteConfigFromGraph(graph: MixGraph, mode: "development" |
   }
 
   if (staticTargets.length) {
-    plugins.push(staticCopyPlugin(staticTargets, graph.publicPath));
+    plugins.push(staticCopyPlugin(staticTargets));
   }
 
   return {

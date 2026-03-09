@@ -61,4 +61,5 @@ jobs:
                 temperature: 0.3
               }')" | jq -r '.choices[0].message.content')
 
-          gh pr edit "$PR_NUMBER" --body "$BODY"$'\n\n<!-- ai-generated -->'
+          BODY="${BODY}"$'\n\n<!-- ai-generated -->'
+          gh pr edit "$PR_NUMBER" --body "$BODY"

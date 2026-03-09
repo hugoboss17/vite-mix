@@ -235,4 +235,23 @@ describe("webpackCompatResolvePlugin - resolveId", () => {
     const plugin = await getCompatPlugin();
     expect(() => plugin.resolveId("./Component", "/project/src/index.js")).not.toThrow();
   });
+
+  it("returns null for absolute path source with no matching vue file", async () => {
+    const plugin = await getCompatPlugin();
+    expect(plugin.resolveId("/absolute/Component", "/project/src/index.js")).toBeNull();
+  });
+
+  it("resolves bare asset import with query string stripped", async () => {
+    vi.mocked(fs.statSync).mockImplementationOnce(() => statFile());
+    const plugin = await getCompatPlugin();
+    const result = plugin.resolveId("theme/images/logo.png?v=1", "/project/src/index.js");
+    expect(result).toContain("resources/assets");
+  });
+
+  it("resolves bare asset import with hash stripped", async () => {
+    vi.mocked(fs.statSync).mockImplementationOnce(() => statFile());
+    const plugin = await getCompatPlugin();
+    const result = plugin.resolveId("theme/images/logo.png#anchor", "/project/src/index.js");
+    expect(result).toContain("resources/assets");
+  });
 });
