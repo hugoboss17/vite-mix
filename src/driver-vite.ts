@@ -1,6 +1,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import { type InlineConfig, type Plugin } from "vite";
+import vue from "@vitejs/plugin-vue";
 import type { MixGraph } from "./index.js";
 
 function relKeyFromResources(file: string) {
@@ -16,6 +17,9 @@ function ensurePosix(p: string) {
 function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+
+const VALID_IDENT = /^[a-zA-Z_$][\w$]*(\.[a-zA-Z_$][\w$]*)*$/;
+const VALID_MODULE = /^[@a-zA-Z][\w./@-]*$/;
 
 function hasFile(p: string) {
   try {
@@ -47,9 +51,9 @@ function webpackCompatResolvePlugin() {
     enforce: "pre" as const,
     resolveId(source: string, importer?: string) {
       if (!importer) return null;
-      const isRelativeOrAbsolute = source.startsWith(".") || source.startsWith("/");
+      const isRelative = source.startsWith(".");
 
-      if (isRelativeOrAbsolute && !path.extname(source)) {
+      if (isRelative && !path.extname(source)) {
         const importerPath = importer.split("?")[0];
         const baseDir = path.dirname(importerPath);
         const abs = path.resolve(baseDir, source);
@@ -83,6 +87,18 @@ function webpackCompatResolvePlugin() {
 }
 
 function autoloadPlugin(identMap: Record<string, string>): Plugin {
+  const patterns = Object.entries(identMap).map(([ident, module]) => {
+    if (!VALID_IDENT.test(ident)) throw new Error(`Invalid autoload identifier: ${ident}`);
+    if (!VALID_MODULE.test(module)) throw new Error(`Invalid autoload module: ${module}`);
+    return {
+      ident,
+      module,
+      localName: ident.startsWith("window.") ? ident.slice(7) : ident,
+      isWindow: ident.startsWith("window."),
+      regex: ident.startsWith("window.") ? null : new RegExp(`(?<![.\\w$])${escapeRegExp(ident)}(?![\\w$])`),
+    };
+  });
+
   return {
     name: "mix-inject",
     enforce: "post" as const,
@@ -93,9 +109,7 @@ function autoloadPlugin(identMap: Record<string, string>): Plugin {
       const toAdd: string[] = [];
       const seen = new Set<string>();
 
-      for (const [ident, module] of Object.entries(identMap)) {
-        const isWindowIdent = ident.startsWith("window.");
-        const localName = isWindowIdent ? ident.slice(7) : ident;
+      for (const { ident, module, localName, isWindow, regex } of patterns) {
         if (seen.has(localName)) continue;
 
         if (
@@ -106,12 +120,7 @@ function autoloadPlugin(identMap: Record<string, string>): Plugin {
         )
           continue;
 
-        let used = false;
-        if (isWindowIdent) {
-          used = code.includes(ident);
-        } else {
-          used = new RegExp(`(?<![.\\w$])${escapeRegExp(ident)}(?![\\w$])`).test(code);
-        }
+        const used = isWindow ? code.includes(ident) : regex!.test(code);
 
         if (used) {
           toAdd.push(`import ${localName} from '${module}';`);
@@ -125,43 +134,78 @@ function autoloadPlugin(identMap: Record<string, string>): Plugin {
   };
 }
 
-function staticCopyPlugin(targets: Array<{ src: string; dest: string; rename?: string }>, publicPath: string): Plugin {
-  async function performCopy(): Promise<void> {
-    for (const { src, dest, rename } of targets) {
-      const absDestDir = path.resolve(publicPath, dest);
-      try {
-        if (src.endsWith("/**/*")) {
-          const srcDir = src.slice(0, -5);
-          await fs.promises.cp(srcDir, absDestDir, { recursive: true });
-        } else {
-          const filename = rename ?? path.basename(src);
-          await fs.promises.mkdir(absDestDir, { recursive: true });
-          await fs.promises.copyFile(src, path.join(absDestDir, filename));
-        }
-      } catch {
-        // Source may not exist yet during dev server startup
-      }
-    }
-  }
+async function collectFiles(dir: string): Promise<Array<{ abs: string; rel: string }>> {
+  const entries = await fs.promises.readdir(dir, { recursive: true, withFileTypes: true });
+  return entries
+    .filter((e) => e.isFile())
+    .map((e) => {
+      const abs = path.join(e.parentPath, e.name);
+      return { abs, rel: path.relative(dir, abs) };
+    });
+}
 
+function safePath(base: string, untrusted: string): string | null {
+  const resolved = path.resolve(base, untrusted);
+  return resolved.startsWith(base + path.sep) ? resolved : null;
+}
+
+function outputPath(dest: string, filename: string): string {
+  return dest && dest !== "." ? `${dest}/${filename}` : filename;
+}
+
+function staticCopyPlugin(targets: Array<{ src: string; dest: string; rename?: string }>): Plugin {
   return {
     name: "mix-static-copy",
     async buildStart() {
-      await performCopy();
-    },
-    async closeBundle() {
-      await performCopy();
+      for (const { src, dest, rename } of targets) {
+        try {
+          if (src.endsWith("/**/*")) {
+            const srcDir = src.slice(0, -5);
+            for (const { abs, rel } of await collectFiles(srcDir)) {
+              this.emitFile({ type: "asset", fileName: outputPath(dest, rel), source: await fs.promises.readFile(abs) });
+            }
+          } else {
+            const filename = rename ?? path.basename(src);
+            this.emitFile({ type: "asset", fileName: outputPath(dest, filename), source: await fs.promises.readFile(src) });
+          }
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        }
+      }
     },
     configureServer(server) {
-      server.watcher.on("change", async () => {
-        await performCopy();
+      server.middlewares.use((req, res, next) => {
+        const url = decodeURIComponent(req.url?.split("?")[0] ?? "");
+        for (const { src, dest, rename } of targets) {
+          if (src.endsWith("/**/*")) {
+            const prefix = `/${dest}/`;
+            if (url.startsWith(prefix)) {
+              const srcDir = path.resolve(src.slice(0, -5));
+              const file = safePath(srcDir, url.slice(prefix.length));
+              if (!file) { next(); return; }
+              fs.promises.readFile(file)
+                .then((content) => res.end(content))
+                .catch(() => next());
+              return;
+            }
+          } else {
+            const filename = rename ?? path.basename(src);
+            if (url === `/${outputPath(dest, filename)}`) {
+              fs.promises.readFile(src)
+                .then((content) => res.end(content))
+                .catch(() => next());
+              return;
+            }
+          }
+        }
+        next();
       });
     },
   };
 }
 
-export async function viteConfigFromGraph(graph: MixGraph, mode: "development" | "production"): Promise<InlineConfig> {
-  const isProd = mode === "production";
+export async function viteConfigFromGraph(graph: MixGraph, mode?: "development" | "production"): Promise<InlineConfig> {
+  const isProd = (mode ?? process.env.NODE_ENV) === "production";
 
   const input: Record<string, string> = {};
 
@@ -178,6 +222,7 @@ export async function viteConfigFromGraph(graph: MixGraph, mode: "development" |
   const staticTargets: Array<{ src: string; dest: string; rename?: string }> = [];
 
   const resolvedPublic = path.resolve(graph.publicPath);
+  const publicPrefixRe = new RegExp(`^${escapeRegExp(ensurePosix(graph.publicPath))}/?`);
 
   function guardDest(dest: string) {
     const resolved = path.resolve(graph.publicPath, dest);
@@ -187,7 +232,7 @@ export async function viteConfigFromGraph(graph: MixGraph, mode: "development" |
   }
 
   for (const c of graph.copies) {
-    const normalizedDest = ensurePosix(c.dest).replace(new RegExp(`^${escapeRegExp(ensurePosix(graph.publicPath))}/?`), "");
+    const normalizedDest = ensurePosix(c.dest).replace(publicPrefixRe, "");
     guardDest(normalizedDest);
     const destDir = path.posix.dirname(normalizedDest);
     const base = path.posix.basename(normalizedDest);
@@ -201,7 +246,7 @@ export async function viteConfigFromGraph(graph: MixGraph, mode: "development" |
   }
 
   for (const cd of graph.copyDirs) {
-    const normalizedDest = ensurePosix(cd.dest).replace(new RegExp(`^${escapeRegExp(ensurePosix(graph.publicPath))}/?`), "");
+    const normalizedDest = ensurePosix(cd.dest).replace(publicPrefixRe, "");
     guardDest(normalizedDest);
     staticTargets.push({
       src: ensurePosix(cd.src) + "/**/*",
@@ -209,30 +254,25 @@ export async function viteConfigFromGraph(graph: MixGraph, mode: "development" |
     });
   }
 
-  const wantsJquery =
-    Object.values(graph.autoload).some((arr) => arr.includes("$") || arr.includes("jQuery") || arr.includes("window.jQuery")) ||
-    Object.keys(graph.autoload).some((k) => k.toLowerCase() === "jquery");
+  const autoloadMap: Record<string, string> = {};
+  for (const [module, identifiers] of Object.entries(graph.autoload)) {
+    for (const ident of identifiers) {
+      autoloadMap[ident] = module;
+    }
+  }
 
-  const plugins: any[] = [webpackCompatResolvePlugin()];
+  const plugins: Plugin[] = [webpackCompatResolvePlugin()];
 
-  const wantsVue3 = graph.js.some((e) => e.vue?.version === 3);
-  if (wantsVue3) {
-    const { default: vue } = await import("@vitejs/plugin-vue");
+  if (graph.vue) {
     plugins.push(vue());
   }
 
-  if (wantsJquery) {
-    plugins.push(
-      autoloadPlugin({
-        $: "jquery",
-        jQuery: "jquery",
-        "window.jQuery": "jquery",
-      })
-    );
+  if (Object.keys(autoloadMap).length) {
+    plugins.push(autoloadPlugin(autoloadMap));
   }
 
   if (staticTargets.length) {
-    plugins.push(staticCopyPlugin(staticTargets, graph.publicPath));
+    plugins.push(staticCopyPlugin(staticTargets));
   }
 
   return {

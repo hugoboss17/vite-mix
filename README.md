@@ -35,23 +35,20 @@ Replace your `webpack.mix.js` with `vite.config.js` with a Mix-style definition:
 
 ```js
 // vite.config.js
-import { defineConfig } from "vite";
 import { mix, viteConfigFromGraph } from "laravel-vite-mix";
 
-const m = mix()
+const graph = mix()
   .setPublicPath("public")
   .js("resources/assets/js/app.js", "public/js")
-  .vue({ version: 3 })
+  .vue()
   .sass("resources/assets/sass/app.scss", "public/css")
   .css("resources/assets/css/simple.css", "public/css")
   .copy("resources/assets/images/logo.png", "public/images/logo.png")
   .copyDirectory("resources/assets/fonts", "public/fonts")
   .autoload({ jquery: ["$", "jQuery", "window.jQuery"] })
-  .version();
+  .toGraph();
 
-const mode = process.env.NODE_ENV === "production" ? "production" : "development";
-
-export default defineConfig(async () => await viteConfigFromGraph(m.toGraph(), mode));
+export default await viteConfigFromGraph(graph);
 ```
 
 Add scripts to your `package.json`:
@@ -76,22 +73,104 @@ npm run dev      # dev server
 
 ## Supported API
 
-| Method | Description |
-|---|---|
-| `mix()` | Create a new Mix instance |
-| `.setPublicPath(path)` | Output directory (default: `"public"`) |
-| `.options({ processCssUrls })` | Build options |
-| `.js(src, dest)` | JavaScript/TypeScript entry point |
-| `.vue({ version: 3 })` | Enable Vue plugin for the preceding `.js()` call |
-| `.sass(src, dest)` | Sass/SCSS entry point |
-| `.css(src, dest)` | Plain CSS entry point |
-| `.copy(src, dest)` | Copy a file to the output directory |
-| `.copyDirectory(src, dest)` | Copy a directory to the output directory |
-| `.autoload(map)` | Inject globals (e.g. jQuery) |
-| `.version()` | Enable content hashing in output filenames |
-| `.inProduction()` | Returns `true` when `NODE_ENV=production` |
-| `.toGraph()` | Returns the build graph (pass to `viteConfigFromGraph`) |
-| `viteConfigFromGraph(graph, mode)` | Returns a Vite `InlineConfig` |
+| Method                              | Description                                                 |
+| ----------------------------------- | ----------------------------------------------------------- |
+| `mix()`                             | Create a new Mix instance                                   |
+| `.setPublicPath(path)`              | Output directory (default: `"public"`)                      |
+| `.js(src, dest)`                    | JavaScript/TypeScript entry point                           |
+| `.vue()`                            | Enable Vue 3                                                |
+| `.sass(src, dest)`                  | Sass/SCSS entry point                                       |
+| `.css(src, dest)`                   | Plain CSS entry point                                       |
+| `.copy(src, dest)`                  | Copy a file to the output directory                         |
+| `.copyDirectory(src, dest)`         | Copy a directory to the output directory                    |
+| `.autoload(map)`                    | Inject globals (e.g. jQuery, Lodash)                        |
+| `.toGraph()`                        | Returns the build graph (pass to `viteConfigFromGraph`)     |
+| `viteConfigFromGraph(graph, mode?)` | Returns a Vite `InlineConfig` (mode defaults to `NODE_ENV`) |
+
+## Examples
+
+### Basic JavaScript
+
+```js
+import { mix, viteConfigFromGraph } from "laravel-vite-mix";
+
+const graph = mix()
+  .setPublicPath("public")
+  .js("resources/assets/js/app.js", "public/js")
+  .toGraph();
+
+export default await viteConfigFromGraph(graph);
+```
+
+### Sass / CSS
+
+```js
+mix()
+  .setPublicPath("public")
+  .sass("resources/assets/sass/app.scss", "public/css")
+  .css("resources/assets/css/vendor.css", "public/css")
+  .toGraph();
+```
+
+### Vue 3
+
+```js
+mix()
+  .setPublicPath("public")
+  .js("resources/assets/js/app.js", "public/js")
+  .js("resources/assets/js/admin.js", "public/js")
+  .vue()
+  .toGraph();
+```
+
+only the second JS import uses Vue
+
+### Autoloading
+
+Works with any library, not just jQuery:
+
+```js
+mix()
+  .setPublicPath("public")
+  .autoload({
+    jquery: ["$", "jQuery", "window.jQuery"],
+    lodash: ["_"],
+  })
+  .toGraph();
+```
+
+### Static Assets
+
+```js
+mix()
+  .setPublicPath("public")
+  .copy("resources/assets/images/logo.png", "public/images/logo.png")
+  .copyDirectory("resources/assets/fonts", "public/fonts")
+  .toGraph();
+```
+
+### Full Example
+
+```js
+// vite.config.js
+import { mix, viteConfigFromGraph } from "laravel-vite-mix";
+
+const graph = mix()
+  .setPublicPath("public")
+  .js("resources/assets/js/app.js", "public/js")
+  .vue()
+  .sass("resources/assets/sass/app.scss", "public/css")
+  .css("resources/assets/css/vendor.css", "public/css")
+  .autoload({
+    jquery: ["$", "jQuery", "window.jQuery"],
+    lodash: ["_"],
+  })
+  .copy("resources/assets/images/logo.png", "public/images/logo.png")
+  .copyDirectory("resources/assets/fonts", "public/fonts")
+  .toGraph();
+
+export default await viteConfigFromGraph(graph);
+```
 
 ## Webpack compatibility handled
 

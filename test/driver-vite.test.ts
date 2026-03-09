@@ -63,7 +63,7 @@ describe("viteConfigFromGraph - plugins", () => {
     const graph = mix()
       .setPublicPath("public")
       .js("resources/assets/js/app.js", "public/js")
-      .vue({ version: 3 })
+      .vue()
       .toGraph();
     const config = await viteConfigFromGraph(graph, "development");
     expect((config.plugins as any[]).some((p) => p?.name === "vite:vue")).toBe(true);
@@ -84,6 +84,16 @@ describe("viteConfigFromGraph - plugins", () => {
     const graph = mix()
       .setPublicPath("public")
       .autoload({ jQuery: ["someOtherVar"] })
+      .toGraph();
+    const config = await viteConfigFromGraph(graph, "development");
+    const plugins = config.plugins as any[];
+    expect(plugins.some((p) => p?.enforce === "post")).toBe(true);
+  });
+
+  it("adds inject plugin for non-jquery libraries like lodash", async () => {
+    const graph = mix()
+      .setPublicPath("public")
+      .autoload({ lodash: ["_"] })
       .toGraph();
     const config = await viteConfigFromGraph(graph, "development");
     const plugins = config.plugins as any[];
@@ -234,5 +244,101 @@ describe("webpackCompatResolvePlugin - resolveId", () => {
   it("does not throw when statSync throws (hasFile/hasDir error paths)", async () => {
     const plugin = await getCompatPlugin();
     expect(() => plugin.resolveId("./Component", "/project/src/index.js")).not.toThrow();
+  });
+
+  it("returns null for absolute path source with no matching vue file", async () => {
+    const plugin = await getCompatPlugin();
+    expect(plugin.resolveId("/absolute/Component", "/project/src/index.js")).toBeNull();
+  });
+
+  it("resolves bare asset import with query string stripped", async () => {
+    vi.mocked(fs.statSync).mockImplementationOnce(() => statFile());
+    const plugin = await getCompatPlugin();
+    const result = plugin.resolveId("theme/images/logo.png?v=1", "/project/src/index.js");
+    expect(result).toContain("resources/assets");
+  });
+
+  it("resolves bare asset import with hash stripped", async () => {
+    vi.mocked(fs.statSync).mockImplementationOnce(() => statFile());
+    const plugin = await getCompatPlugin();
+    const result = plugin.resolveId("theme/images/logo.png#anchor", "/project/src/index.js");
+    expect(result).toContain("resources/assets");
+  });
+});
+
+describe("security - autoload validation", () => {
+  beforeEach(mockNotFound);
+
+  it("rejects identifier with code injection attempt", async () => {
+    const graph = mix().setPublicPath("public").toGraph();
+    graph.autoload = { jquery: ["x from 'evil'; import y"] };
+    await expect(viteConfigFromGraph(graph, "development")).rejects.toThrow("Invalid autoload identifier");
+  });
+
+  it("rejects module name with code injection attempt", async () => {
+    const graph = mix().setPublicPath("public").toGraph();
+    graph.autoload = { "evil'; console.log('pwned": ["$"] };
+    await expect(viteConfigFromGraph(graph, "development")).rejects.toThrow("Invalid autoload module");
+  });
+
+  it("rejects identifier with semicolon", async () => {
+    const graph = mix().setPublicPath("public").toGraph();
+    graph.autoload = { jquery: ["$; malicious()"] };
+    await expect(viteConfigFromGraph(graph, "development")).rejects.toThrow("Invalid autoload identifier");
+  });
+
+  it("accepts valid dotted identifier like window.jQuery", async () => {
+    const graph = mix().setPublicPath("public").autoload({ jquery: ["window.jQuery"] }).toGraph();
+    const config = await viteConfigFromGraph(graph, "development");
+    expect((config.plugins as any[]).some((p) => p?.enforce === "post")).toBe(true);
+  });
+
+  it("accepts valid scoped module like @scope/package", async () => {
+    const graph = mix().setPublicPath("public").autoload({ "@myorg/utils": ["utils"] }).toGraph();
+    const config = await viteConfigFromGraph(graph, "development");
+    expect((config.plugins as any[]).some((p) => p?.enforce === "post")).toBe(true);
+  });
+});
+
+describe("security - copy destination traversal", () => {
+  beforeEach(mockNotFound);
+
+  it("rejects copy destination that escapes publicPath", async () => {
+    const graph = mix().setPublicPath("public").toGraph();
+    graph.copies.push({ src: "file.txt", dest: "../../etc/passwd" });
+    await expect(viteConfigFromGraph(graph, "development")).rejects.toThrow("copy destination escapes publicPath");
+  });
+
+  it("rejects copyDirectory destination that escapes publicPath", async () => {
+    const graph = mix().setPublicPath("public").toGraph();
+    graph.copyDirs.push({ src: "assets", dest: "../outside" });
+    await expect(viteConfigFromGraph(graph, "development")).rejects.toThrow("copy destination escapes publicPath");
+  });
+
+  it("allows copy destination within publicPath", async () => {
+    const graph = mix().setPublicPath("public").copy("logo.png", "public/images/logo.png").toGraph();
+    const config = await viteConfigFromGraph(graph, "development");
+    const flat = (config.plugins as any[]).flat();
+    expect(flat.some((p) => p?.name === "mix-static-copy")).toBe(true);
+  });
+});
+
+describe("security - absolute path resolution", () => {
+  beforeEach(mockNotFound);
+
+  it("does not resolve absolute paths through vue logic", async () => {
+    vi.mocked(fs.statSync).mockImplementation((p) => {
+      if (String(p).endsWith(".vue")) return statFile();
+      notFound();
+    });
+    const plugin = await getCompatPlugin();
+    const result = plugin.resolveId("/etc/passwd", "/project/src/index.js");
+    expect(result).toBeNull();
+  });
+
+  it("does not resolve absolute path with traversal", async () => {
+    const plugin = await getCompatPlugin();
+    const result = plugin.resolveId("/../../etc/shadow", "/project/src/index.js");
+    expect(result).toBeNull();
   });
 });

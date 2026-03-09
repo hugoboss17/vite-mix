@@ -2,12 +2,10 @@
 
 ## Supported Versions
 
-Currently no version is safe for use, I'll be working on this project to release version 1.0.0 to be the first supported version.
-
 | Version | Supported |
 | - | - |
-| 1.0.0 | in progress |
-| < 1.0.x | :x: |
+| >= 0.5.x | :white_check_mark: |
+| < 0.5.0 | :x: |
 
 ## Reporting a Vulnerability
 

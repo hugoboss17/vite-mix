@@ -1,13 +1,10 @@
 import path from "node:path";
 
-export type VueOptions = { version: 2 | 3 };
-export type MixOptions = { processCssUrls?: boolean };
-
 export type CopyTarget = { src: string; dest: string; rename?: string };
 export type CopyDirTarget = { src: string; dest: string };
 
 export type CssEntry = { src: string; destDir: string };
-export type JsEntry = { src: string; destDirOrFile: string; vue?: VueOptions };
+export type JsEntry = { src: string; destDirOrFile: string };
 
 export type MixGraph = {
   publicPath: string;
@@ -17,8 +14,7 @@ export type MixGraph = {
   copies: CopyTarget[];
   copyDirs: CopyDirTarget[];
   autoload: Record<string, string[]>;
-  options: MixOptions;
-  versioning: boolean;
+  vue: boolean;
 };
 
 function normalizePublicPath(p: string) {
@@ -39,8 +35,7 @@ export class Mix {
       copies: [],
       copyDirs: [],
       autoload: {},
-      options: {},
-      versioning: false,
+      vue: false,
     };
   }
 
@@ -54,19 +49,13 @@ export class Mix {
     return this;
   }
 
-  options(opts: MixOptions) {
-    this.graph.options = { ...this.graph.options, ...opts };
-    return this;
-  }
-
   js(src: string, dest: string) {
     this.graph.js.push({ src, destDirOrFile: dest });
     return this;
   }
 
-  vue(opts: VueOptions) {
-    const last = this.graph.js[this.graph.js.length - 1];
-    if (last) last.vue = opts;
+  vue() {
+    this.graph.vue = true;
     return this;
   }
 
@@ -95,15 +84,6 @@ export class Mix {
     return this;
   }
 
-  version() {
-    this.graph.versioning = true;
-    return this;
-  }
-
-  inProduction() {
-    return process.env.NODE_ENV === "production";
-  }
-
   toGraph(): MixGraph {
     return {
       publicPath: this.graph.publicPath,
@@ -113,18 +93,13 @@ export class Mix {
       copies: this.graph.copies.map((entry) => ({ ...entry })),
       copyDirs: this.graph.copyDirs.map((entry) => ({ ...entry })),
       autoload: Object.fromEntries(Object.entries(this.graph.autoload).map(([key, values]) => [key, [...values]])),
-      options: { ...this.graph.options },
-      versioning: this.graph.versioning,
+      vue: this.graph.vue,
     };
   }
 }
 
 export function mix() {
   return new Mix();
-}
-
-export function isFilePath(p: string) {
-  return /\.[a-z0-9]+$/i.test(path.basename(p));
 }
 
 export { viteConfigFromGraph } from "./driver-vite.js";

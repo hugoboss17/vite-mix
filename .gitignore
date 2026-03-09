@@ -1,6 +1,7 @@
 node_modules/
 
 .claude/
+CLAUDE.md
 
 dist/
 coverage/

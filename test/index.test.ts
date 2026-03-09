@@ -1,15 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isFilePath, mix, viteConfigFromGraph } from "../src/index.ts";
-
-describe("isFilePath", () => {
-  it("detects file-like paths", () => {
-    expect(isFilePath("resources/assets/js/app.js")).toBe(true);
-    expect(isFilePath("/tmp/archive.TAR.GZ")).toBe(true);
-    expect(isFilePath("public/css/app.css")).toBe(true);
-    expect(isFilePath("resources/assets/js")).toBe(false);
-    expect(isFilePath("public/fonts")).toBe(false);
-  });
-});
+import { mix, viteConfigFromGraph } from "../src/index.ts";
 
 describe("mix() builder", () => {
   it("returns a Mix instance with fluent chaining", () => {
@@ -21,7 +11,6 @@ describe("mix() builder", () => {
       .copy("resources/assets/images/logo.png", "public/images/logo.png")
       .copyDirectory("resources/assets/fonts", "public/fonts")
       .autoload({ jquery: ["$", "jQuery", "window.jQuery"] })
-      .version()
       .toGraph();
 
     expect(graph.publicPath).toBe("public");
@@ -31,7 +20,6 @@ describe("mix() builder", () => {
     expect(graph.copies).toHaveLength(1);
     expect(graph.copyDirs).toHaveLength(1);
     expect(graph.autoload.jquery).toEqual(["$", "jQuery", "window.jQuery"]);
-    expect(graph.versioning).toBe(true);
   });
 
   it("setPublicPath strips trailing slashes", () => {
@@ -45,25 +33,9 @@ describe("mix() builder", () => {
     );
   });
 
-  it("options() merges into existing options", () => {
-    const graph = mix().options({ processCssUrls: false }).toGraph();
-    expect(graph.options.processCssUrls).toBe(false);
-  });
-
-  it("js() adds entry and vue() attaches to last entry", () => {
-    const graph = mix()
-      .js("resources/assets/js/app.js", "public/js")
-      .js("resources/assets/js/second.js", "public/js")
-      .vue({ version: 3 })
-      .toGraph();
-
-    expect(graph.js).toHaveLength(2);
-    expect(graph.js[1].vue).toEqual({ version: 3 });
-  });
-
-  it("vue() on empty js list does nothing", () => {
-    const graph = mix().vue({ version: 3 }).toGraph();
-    expect(graph.js).toHaveLength(0);
+  it("vue() enables Vue plugin", () => {
+    expect(mix().toGraph().vue).toBe(false);
+    expect(mix().vue().toGraph().vue).toBe(true);
   });
 
   it("autoload() merges multiple calls", () => {
@@ -74,20 +46,6 @@ describe("mix() builder", () => {
 
     expect(graph.autoload.jquery).toEqual(["$"]);
     expect(graph.autoload.lodash).toEqual(["_"]);
-  });
-
-  it("version() sets versioning flag", () => {
-    expect(mix().toGraph().versioning).toBe(false);
-    expect(mix().version().toGraph().versioning).toBe(true);
-  });
-
-  it("inProduction() reflects NODE_ENV", () => {
-    const original = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
-    expect(mix().inProduction()).toBe(true);
-    process.env.NODE_ENV = "development";
-    expect(mix().inProduction()).toBe(false);
-    process.env.NODE_ENV = original;
   });
 });
 

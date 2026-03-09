@@ -13,7 +13,10 @@ jobs:
   generate:
     name: Generate PR description
     runs-on: ubuntu-latest
-    if: github.event.pull_request.body == '' || contains(github.event.pull_request.body, '<!-- ai-generated -->')
+    if: >-
+      github.event.action == 'synchronize' ||
+      github.event.pull_request.body == '' ||
+      contains(github.event.pull_request.body, '<!-- ai-generated -->')
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
@@ -61,4 +64,5 @@ jobs:
                 temperature: 0.3
               }')" | jq -r '.choices[0].message.content')
 
-          gh pr edit "$PR_NUMBER" --body "$BODY"$'\n\n<!-- ai-generated -->'
+          BODY="${BODY}"$'\n\n<!-- ai-generated -->'
+          gh pr edit "$PR_NUMBER" --body "$BODY"
