@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.0](https://github.com/hugoboss17/laravel-vite-mix/compare/laravel-vite-mix-v0.4.0...laravel-vite-mix-v0.5.0) (2026-03-09)
+
+
+### Features
+
+* eliminate runtime dependencies and harden CI egress ([db42f18](https://github.com/hugoboss17/laravel-vite-mix/commit/db42f18083f435ce1fd9d59fbaaa1338d06d0e02))
+* eliminate runtime dependencies and harden CI egress ([c88a12e](https://github.com/hugoboss17/laravel-vite-mix/commit/c88a12ee4aef1e56097bea3e55a3b54e7c857951))
+
+
+### Bug Fixes
+
+* egress some websites ([37d4f6d](https://github.com/hugoboss17/laravel-vite-mix/commit/37d4f6d07fef91541321792513573662f81dde0f))
+* npm update ([2d2cf74](https://github.com/hugoboss17/laravel-vite-mix/commit/2d2cf7478a0146dcab796f3168811ab4112f0b95))
+* release assets egress ([a6dd370](https://github.com/hugoboss17/laravel-vite-mix/commit/a6dd3706dbf2a2a3a9b0367ff1c9039bbcba188f))
+
 ## [0.4.0](https://github.com/hugoboss17/laravel-vite-mix/compare/laravel-vite-mix-v0.3.0...laravel-vite-mix-v0.4.0) (2026-03-07)
 
 
