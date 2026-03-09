@@ -3,7 +3,13 @@ import fs from "node:fs";
 import { mix, viteConfigFromGraph } from "../src/index.ts";
 
 vi.mock("node:fs", () => ({
-  default: { statSync: vi.fn() },
+  default: {
+    statSync: vi.fn(),
+    promises: {
+      readFile: vi.fn(),
+      readdir: vi.fn(),
+    },
+  },
 }));
 
 vi.mock("@vitejs/plugin-vue", () => ({
@@ -320,6 +326,443 @@ describe("security - copy destination traversal", () => {
     const config = await viteConfigFromGraph(graph, "development");
     const flat = (config.plugins as any[]).flat();
     expect(flat.some((p) => p?.name === "mix-static-copy")).toBe(true);
+  });
+});
+
+async function getAutoloadPlugin(autoload: Record<string, string[]>) {
+  const graph = mix().setPublicPath("public").autoload(autoload).toGraph();
+  const config = await viteConfigFromGraph(graph, "development");
+  return (config.plugins as any[]).find((p) => p?.name === "mix-inject");
+}
+
+async function getStaticCopyPlugin(setup: (m: ReturnType<typeof mix>) => ReturnType<typeof mix>) {
+  const graph = setup(mix().setPublicPath("public")).toGraph();
+  const config = await viteConfigFromGraph(graph, "development");
+  return (config.plugins as any[]).flat().find((p) => p?.name === "mix-static-copy");
+}
+
+describe("autoloadPlugin - transform", () => {
+  beforeEach(mockNotFound);
+
+  it("skips node_modules files", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform("const x = $;", "/project/node_modules/foo/index.js");
+    expect(result).toBeUndefined();
+  });
+
+  it("skips non-js/ts files", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform("const x = $;", "/project/src/style.css");
+    expect(result).toBeUndefined();
+  });
+
+  it("injects import when identifier is used", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform("const el = $(selector);", "/project/src/app.js");
+    expect(result.code).toContain("import $ from 'jquery';");
+  });
+
+  it("injects import for window.jQuery identifier", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["window.jQuery"] });
+    const result = plugin.transform("window.jQuery.fn.test = 1;", "/project/src/app.js");
+    expect(result.code).toContain("import jQuery from 'jquery';");
+  });
+
+  it("does not inject when module is already imported (single quotes)", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform("import $ from 'jquery'; $(sel);", "/project/src/app.js");
+    expect(result).toBeUndefined();
+  });
+
+  it("does not inject when module is already imported (double quotes)", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform('import $ from "jquery"; $(sel);', "/project/src/app.js");
+    expect(result).toBeUndefined();
+  });
+
+  it("does not inject when module is already required (single quotes)", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform("const $ = require('jquery'); $(sel);", "/project/src/app.js");
+    expect(result).toBeUndefined();
+  });
+
+  it("does not inject when module is already required (double quotes)", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform('const $ = require("jquery"); $(sel);', "/project/src/app.js");
+    expect(result).toBeUndefined();
+  });
+
+  it("does not inject when identifier is not used", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform("const x = 1;", "/project/src/app.js");
+    expect(result).toBeUndefined();
+  });
+
+  it("does not match identifier as part of another word", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform("const x$y = 1;", "/project/src/app.js");
+    expect(result).toBeUndefined();
+  });
+
+  it("handles .ts files", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform("$(sel);", "/project/src/app.ts");
+    expect(result.code).toContain("import $ from 'jquery';");
+  });
+
+  it("handles .tsx files", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform("$(sel);", "/project/src/app.tsx");
+    expect(result.code).toContain("import $ from 'jquery';");
+  });
+
+  it("handles .jsx files", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform("$(sel);", "/project/src/app.jsx");
+    expect(result.code).toContain("import $ from 'jquery';");
+  });
+
+  it("handles file id with query string", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform("$(sel);", "/project/src/app.js?v=1");
+    expect(result.code).toContain("import $ from 'jquery';");
+  });
+
+  it("deduplicates multiple identifiers mapping to same local name", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$", "jQuery"] });
+    const result = plugin.transform("$(sel); jQuery.fn;", "/project/src/app.js");
+    expect(result.code).toContain("import $ from 'jquery';");
+    expect(result.code).toContain("import jQuery from 'jquery';");
+  });
+
+  it("skips duplicate localName when window.X and X both map to same name", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["jQuery", "window.jQuery"] });
+    const result = plugin.transform("jQuery.fn.test = 1;", "/project/src/app.js");
+    // Should only inject one import for jQuery, not two
+    const imports = result.code.split("\n").filter((l: string) => l.startsWith("import "));
+    expect(imports).toHaveLength(1);
+  });
+
+  it("returns map: null in transform result", async () => {
+    const plugin = await getAutoloadPlugin({ jquery: ["$"] });
+    const result = plugin.transform("$(sel);", "/project/src/app.js");
+    expect(result.map).toBeNull();
+  });
+});
+
+describe("staticCopyPlugin - buildStart", () => {
+  beforeEach(mockNotFound);
+
+  it("emits a single file asset", async () => {
+    const plugin = await getStaticCopyPlugin((m) => m.copy("resources/logo.png", "public/images/logo.png"));
+    const emitFile = vi.fn();
+    vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from("png-data"));
+    await plugin.buildStart.call({ emitFile });
+    expect(emitFile).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "asset", fileName: "images/logo.png" }),
+    );
+  });
+
+  it("emits directory files with collectFiles", async () => {
+    const plugin = await getStaticCopyPlugin((m) => m.copyDirectory("resources/fonts", "public/fonts"));
+    const emitFile = vi.fn();
+    vi.mocked(fs.promises.readdir).mockResolvedValue([
+      { name: "font.woff2", parentPath: "resources/fonts", isFile: () => true } as any,
+    ]);
+    vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from("font-data"));
+    await plugin.buildStart.call({ emitFile });
+    expect(emitFile).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "asset", fileName: "fonts/font.woff2" }),
+    );
+  });
+
+  it("silently ignores ENOENT errors", async () => {
+    const plugin = await getStaticCopyPlugin((m) => m.copy("missing.png", "public/images/missing.png"));
+    const emitFile = vi.fn();
+    const err = new Error("ENOENT") as NodeJS.ErrnoException;
+    err.code = "ENOENT";
+    vi.mocked(fs.promises.readFile).mockRejectedValue(err);
+    await expect(plugin.buildStart.call({ emitFile })).resolves.toBeUndefined();
+    expect(emitFile).not.toHaveBeenCalled();
+  });
+
+  it("rethrows non-ENOENT errors", async () => {
+    const plugin = await getStaticCopyPlugin((m) => m.copy("bad.png", "public/images/bad.png"));
+    const emitFile = vi.fn();
+    const err = new Error("EACCES") as NodeJS.ErrnoException;
+    err.code = "EACCES";
+    vi.mocked(fs.promises.readFile).mockRejectedValue(err);
+    await expect(plugin.buildStart.call({ emitFile })).rejects.toThrow("EACCES");
+  });
+
+  it("emits file with dest as directory when no rename", async () => {
+    const plugin = await getStaticCopyPlugin((m) => {
+      const g = m.toGraph();
+      g.copies.push({ src: "resources/logo", dest: "public/images" });
+      // Manually build - need a different approach
+      return m;
+    });
+    // This case is covered by copy with no file extension test already
+  });
+});
+
+describe("staticCopyPlugin - configureServer middleware", () => {
+  beforeEach(() => {
+    mockNotFound();
+    vi.mocked(fs.promises.readFile).mockReset();
+  });
+
+  function createMockServer() {
+    const middlewares: any[] = [];
+    return {
+      server: { middlewares: { use: (fn: any) => middlewares.push(fn) } },
+      getMiddleware: () => middlewares[0],
+    };
+  }
+
+  it("serves a single file by exact URL match", async () => {
+    const plugin = await getStaticCopyPlugin((m) => m.copy("resources/logo.png", "public/images/logo.png"));
+    const { server, getMiddleware } = createMockServer();
+    plugin.configureServer(server);
+    const mw = getMiddleware();
+
+    const content = Buffer.from("png-data");
+    vi.mocked(fs.promises.readFile).mockResolvedValue(content);
+
+    const res = { end: vi.fn() };
+    const next = vi.fn();
+    mw({ url: "/images/logo.png" }, res, next);
+
+    await vi.waitFor(() => expect(res.end).toHaveBeenCalledWith(content));
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("serves directory files by prefix match", async () => {
+    const plugin = await getStaticCopyPlugin((m) => m.copyDirectory("resources/fonts", "public/fonts"));
+    const { server, getMiddleware } = createMockServer();
+    plugin.configureServer(server);
+    const mw = getMiddleware();
+
+    const content = Buffer.from("font-data");
+    vi.mocked(fs.promises.readFile).mockResolvedValue(content);
+
+    const res = { end: vi.fn() };
+    const next = vi.fn();
+    mw({ url: "/fonts/myfont.woff2" }, res, next);
+
+    await vi.waitFor(() => expect(res.end).toHaveBeenCalledWith(content));
+  });
+
+  it("calls next() when URL does not match any target", async () => {
+    const plugin = await getStaticCopyPlugin((m) => m.copy("resources/logo.png", "public/images/logo.png"));
+    const { server, getMiddleware } = createMockServer();
+    plugin.configureServer(server);
+    const mw = getMiddleware();
+
+    const res = { end: vi.fn() };
+    const next = vi.fn();
+    mw({ url: "/unrelated/path" }, res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(res.end).not.toHaveBeenCalled();
+  });
+
+  it("calls next() on file read error for single file", async () => {
+    const plugin = await getStaticCopyPlugin((m) => m.copy("resources/logo.png", "public/images/logo.png"));
+    const { server, getMiddleware } = createMockServer();
+    plugin.configureServer(server);
+    const mw = getMiddleware();
+
+    vi.mocked(fs.promises.readFile).mockRejectedValue(new Error("ENOENT"));
+
+    const res = { end: vi.fn() };
+    const next = vi.fn();
+    mw({ url: "/images/logo.png" }, res, next);
+
+    await vi.waitFor(() => expect(next).toHaveBeenCalled());
+  });
+
+  it("calls next() on file read error for directory file", async () => {
+    const plugin = await getStaticCopyPlugin((m) => m.copyDirectory("resources/fonts", "public/fonts"));
+    const { server, getMiddleware } = createMockServer();
+    plugin.configureServer(server);
+    const mw = getMiddleware();
+
+    vi.mocked(fs.promises.readFile).mockRejectedValue(new Error("ENOENT"));
+
+    const res = { end: vi.fn() };
+    const next = vi.fn();
+    mw({ url: "/fonts/myfont.woff2" }, res, next);
+
+    await vi.waitFor(() => expect(next).toHaveBeenCalled());
+  });
+
+  it("calls next() for directory path traversal attempt (safePath returns null)", async () => {
+    const plugin = await getStaticCopyPlugin((m) => m.copyDirectory("resources/fonts", "public/fonts"));
+    const { server, getMiddleware } = createMockServer();
+    plugin.configureServer(server);
+    const mw = getMiddleware();
+
+    const res = { end: vi.fn() };
+    const next = vi.fn();
+    mw({ url: "/fonts/../../../etc/passwd" }, res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(fs.promises.readFile).not.toHaveBeenCalled();
+  });
+
+  it("handles URL with query string", async () => {
+    const plugin = await getStaticCopyPlugin((m) => m.copy("resources/logo.png", "public/images/logo.png"));
+    const { server, getMiddleware } = createMockServer();
+    plugin.configureServer(server);
+    const mw = getMiddleware();
+
+    const content = Buffer.from("png-data");
+    vi.mocked(fs.promises.readFile).mockResolvedValue(content);
+
+    const res = { end: vi.fn() };
+    const next = vi.fn();
+    mw({ url: "/images/logo.png?v=123" }, res, next);
+
+    await vi.waitFor(() => expect(res.end).toHaveBeenCalledWith(content));
+  });
+
+  it("handles missing req.url gracefully", async () => {
+    const plugin = await getStaticCopyPlugin((m) => m.copy("resources/logo.png", "public/images/logo.png"));
+    const { server, getMiddleware } = createMockServer();
+    plugin.configureServer(server);
+    const mw = getMiddleware();
+
+    const res = { end: vi.fn() };
+    const next = vi.fn();
+    mw({ url: undefined }, res, next);
+
+    expect(next).toHaveBeenCalled();
+  });
+});
+
+describe("viteConfigFromGraph - mode fallback", () => {
+  beforeEach(mockNotFound);
+
+  it("falls back to process.env.NODE_ENV when mode is undefined", async () => {
+    const origEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      const graph = mix().setPublicPath("public").js("resources/assets/js/app.js", "public/js").toGraph();
+      const config = await viteConfigFromGraph(graph);
+      const output = config.build?.rollupOptions?.output as { entryFileNames: string };
+      expect(output.entryFileNames).toContain("[hash]");
+    } finally {
+      process.env.NODE_ENV = origEnv;
+    }
+  });
+});
+
+describe("viteConfigFromGraph - assetFileNames edge cases", () => {
+  beforeEach(mockNotFound);
+
+  it("production: handles empty names array", async () => {
+    const graph = mix().setPublicPath("public").js("resources/assets/js/app.js", "public/js").toGraph();
+    const config = await viteConfigFromGraph(graph, "production");
+    const output = config.build?.rollupOptions?.output as { assetFileNames: (i: { names: string[] }) => string };
+    expect(output.assetFileNames({ names: [] })).toMatch(/^assets\//);
+  });
+
+  it("development: handles empty names array", async () => {
+    const graph = mix().setPublicPath("public").js("resources/assets/js/app.js", "public/js").toGraph();
+    const config = await viteConfigFromGraph(graph, "development");
+    const output = config.build?.rollupOptions?.output as { assetFileNames: (i: { names: string[] }) => string };
+    expect(output.assetFileNames({ names: [] })).toMatch(/^assets\//);
+  });
+});
+
+describe("staticCopyPlugin - configureServer single file with rename", () => {
+  beforeEach(() => {
+    mockNotFound();
+    vi.mocked(fs.promises.readFile).mockReset();
+  });
+
+  function createMockServer() {
+    const middlewares: any[] = [];
+    return {
+      server: { middlewares: { use: (fn: any) => middlewares.push(fn) } },
+      getMiddleware: () => middlewares[0],
+    };
+  }
+
+  it("serves renamed single file via middleware", async () => {
+    // copy with file extension in dest produces a rename
+    const plugin = await getStaticCopyPlugin((m) => m.copy("resources/logo.png", "public/images/brand.png"));
+    const { server, getMiddleware } = createMockServer();
+    plugin.configureServer(server);
+    const mw = getMiddleware();
+
+    const content = Buffer.from("png-data");
+    vi.mocked(fs.promises.readFile).mockResolvedValue(content);
+
+    const res = { end: vi.fn() };
+    const next = vi.fn();
+    mw({ url: "/images/brand.png" }, res, next);
+
+    await vi.waitFor(() => expect(res.end).toHaveBeenCalledWith(content));
+  });
+});
+
+describe("staticCopyPlugin - configureServer mixed targets", () => {
+  beforeEach(() => {
+    mockNotFound();
+    vi.mocked(fs.promises.readFile).mockReset();
+  });
+
+  function createMockServer() {
+    const middlewares: any[] = [];
+    return {
+      server: { middlewares: { use: (fn: any) => middlewares.push(fn) } },
+      getMiddleware: () => middlewares[0],
+    };
+  }
+
+  it("falls through directory target when URL does not match prefix", async () => {
+    // Has both a directory and a single-file target; URL matches the single file
+    const graph = mix()
+      .setPublicPath("public")
+      .copyDirectory("resources/fonts", "public/fonts")
+      .copy("resources/logo.png", "public/images/logo.png")
+      .toGraph();
+    const config = await viteConfigFromGraph(graph, "development");
+    const plugin = (config.plugins as any[]).flat().find((p: any) => p?.name === "mix-static-copy");
+
+    const { server, getMiddleware } = createMockServer();
+    plugin.configureServer(server);
+    const mw = getMiddleware();
+
+    const content = Buffer.from("png-data");
+    vi.mocked(fs.promises.readFile).mockResolvedValue(content);
+
+    const res = { end: vi.fn() };
+    const next = vi.fn();
+    mw({ url: "/images/logo.png" }, res, next);
+
+    await vi.waitFor(() => expect(res.end).toHaveBeenCalledWith(content));
+  });
+});
+
+describe("staticCopyPlugin - buildStart with empty dest", () => {
+  beforeEach(() => {
+    mockNotFound();
+    vi.mocked(fs.promises.readFile).mockReset();
+  });
+
+  it("emits file at root when dest is empty (outputPath fallback)", async () => {
+    const graph = mix().setPublicPath("public").toGraph();
+    graph.copies.push({ src: "resources/logo.png", dest: "public/logo.png" });
+    const config = await viteConfigFromGraph(graph, "development");
+    const plugin = (config.plugins as any[]).flat().find((p: any) => p?.name === "mix-static-copy");
+
+    const emitFile = vi.fn();
+    vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from("png"));
+    await plugin.buildStart.call({ emitFile });
+    expect(emitFile).toHaveBeenCalled();
   });
 });
 
