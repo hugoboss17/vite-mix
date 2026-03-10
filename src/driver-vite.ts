@@ -204,7 +204,7 @@ function staticCopyPlugin(targets: Array<{ src: string; dest: string; rename?: s
   };
 }
 
-export async function viteConfigFromGraph(graph: MixGraph, mode: "development" | "production"): Promise<InlineConfig> {
+export async function viteConfigFromGraph(graph: MixGraph, mode: string): Promise<InlineConfig> {
   const isProd = mode === "production";
 
   const input: Record<string, string> = {};
