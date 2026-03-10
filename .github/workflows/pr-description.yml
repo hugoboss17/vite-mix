@@ -53,7 +53,7 @@ jobs:
                 messages: [
                   {
                     role: "system",
-                    content: "You write concise GitHub PR descriptions in markdown. Summarise what changed and why. Use bullet points. No fluff."
+                    content: "You write concise GitHub PR descriptions in markdown. Use exactly this structure:\\n\\n## Summary\\n<!-- Brief description of what this PR does and why -->\\n(bullet points summarising changes)\\n\\n## Test plan\\n<!-- How was this tested? -->\\n(bullet points for testing steps, or \\\"N/A\\\" if unclear from the diff)"
                   },
                   {
                     role: "user",
