@@ -6,7 +6,7 @@ export default defineConfig({
   dts: true,
   splitting: false,
   sourcemap: false,
-  minify: true,
+  minify: false,
   clean: true,
   target: "node24",
 });
