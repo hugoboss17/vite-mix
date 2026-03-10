@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/hugoboss17/laravel-vite-mix/compare/laravel-vite-mix-v0.6.0...laravel-vite-mix-v0.6.1) (2026-03-10)
+
+
+### Bug Fixes
+
+* security md + pinned version ([#40](https://github.com/hugoboss17/laravel-vite-mix/issues/40)) ([8417747](https://github.com/hugoboss17/laravel-vite-mix/commit/8417747455bb812695cbb14298dc10df043131be))
+* tests code coverage ([#38](https://github.com/hugoboss17/laravel-vite-mix/issues/38)) ([59a3082](https://github.com/hugoboss17/laravel-vite-mix/commit/59a3082f3c89100bd5cc4630ca6c02251c7dcf4d))
+
 ## [0.6.0](https://github.com/hugoboss17/laravel-vite-mix/compare/laravel-vite-mix-v0.5.1...laravel-vite-mix-v0.6.0) (2026-03-09)
 
 
