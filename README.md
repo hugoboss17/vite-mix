@@ -36,6 +36,7 @@ Replace your `webpack.mix.js` with `vite.config.js` with a Mix-style definition:
 
 ```js
 // vite.config.js
+import { defineConfig } from "vite";
 import { mix, viteConfigFromGraph } from "laravel-vite-mix";
 
 const graph = mix()
@@ -49,9 +50,14 @@ const graph = mix()
   .autoload({ jquery: ["$", "jQuery", "window.jQuery"] })
   .toGraph();
 
-const mode = process.env.NODE_ENV === "production" ? "production" : "development";
+export default defineConfig(async ({ mode }) => await viteConfigFromGraph(graph, mode));
+```
 
-export default await viteConfigFromGraph(graph, mode);
+If you need to set the mode manually (e.g. outside Vite):
+
+```js
+const mode = process.env.NODE_ENV === "production" ? "production" : "development";
+await viteConfigFromGraph(graph, mode);
 ```
 
 Add scripts to your `package.json`:
@@ -88,13 +94,14 @@ npm run dev      # dev server
 | `.copyDirectory(src, dest)`         | Copy a directory to the output directory                    |
 | `.autoload(map)`                    | Inject globals (e.g. jQuery, Lodash)                        |
 | `.toGraph()`                        | Returns the build graph (pass to `viteConfigFromGraph`)     |
-| `viteConfigFromGraph(graph, mode)`  | Returns a Vite `InlineConfig`                               |
+| `viteConfigFromGraph(graph, mode)`  | Returns a Vite `InlineConfig` (`mode` from Vite's `defineConfig`) |
 
 ## Examples
 
 ### Basic JavaScript
 
 ```js
+import { defineConfig } from "vite";
 import { mix, viteConfigFromGraph } from "laravel-vite-mix";
 
 const graph = mix()
@@ -102,9 +109,7 @@ const graph = mix()
   .js("resources/assets/js/app.js", "public/js")
   .toGraph();
 
-const mode = process.env.NODE_ENV === "production" ? "production" : "development";
-
-export default await viteConfigFromGraph(graph, mode);
+export default defineConfig(async ({ mode }) => await viteConfigFromGraph(graph, mode));
 ```
 
 ### Sass / CSS
@@ -158,6 +163,7 @@ mix()
 
 ```js
 // vite.config.js
+import { defineConfig } from "vite";
 import { mix, viteConfigFromGraph } from "laravel-vite-mix";
 
 const graph = mix()
@@ -174,9 +180,7 @@ const graph = mix()
   .copyDirectory("resources/assets/fonts", "public/fonts")
   .toGraph();
 
-const mode = process.env.NODE_ENV === "production" ? "production" : "development";
-
-export default await viteConfigFromGraph(graph, mode);
+export default defineConfig(async ({ mode }) => await viteConfigFromGraph(graph, mode));
 ```
 
 ## Webpack compatibility handled
