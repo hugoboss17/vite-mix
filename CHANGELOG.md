@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.2](https://github.com/hugoboss17/laravel-vite-mix/compare/laravel-vite-mix-v0.6.1...laravel-vite-mix-v0.6.2) (2026-03-10)
+
+
+### Bug Fixes
+
+* accept any Vite mode string, use defineConfig in examples ([#44](https://github.com/hugoboss17/laravel-vite-mix/issues/44)) ([fa4f0b5](https://github.com/hugoboss17/laravel-vite-mix/commit/fa4f0b52dbb8eb0986a14040c2cdc3ee27f0380a))
+* mode required ([#42](https://github.com/hugoboss17/laravel-vite-mix/issues/42)) ([952fb4e](https://github.com/hugoboss17/laravel-vite-mix/commit/952fb4e07a07913a8a7a39db03bb6d7fb5cd341e))
+
 ## [0.6.1](https://github.com/hugoboss17/laravel-vite-mix/compare/laravel-vite-mix-v0.6.0...laravel-vite-mix-v0.6.1) (2026-03-10)
 
 
