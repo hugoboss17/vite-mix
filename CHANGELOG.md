@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.3](https://github.com/hugoboss17/vite-mix/compare/vite-mix-v0.7.2...vite-mix-v0.7.3) (2026-03-11)
+
+
+### Bug Fixes
+
+* bump actions to v6, not auth problems again.. ([#52](https://github.com/hugoboss17/vite-mix/issues/52)) ([d0c9a9c](https://github.com/hugoboss17/vite-mix/commit/d0c9a9ca3ea68d25324ef094675655ea04a33f00))
+
 ## [0.7.2](https://github.com/hugoboss17/vite-mix/compare/vite-mix-v0.7.1...vite-mix-v0.7.2) (2026-03-11)
 
 
