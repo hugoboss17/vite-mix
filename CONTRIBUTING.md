@@ -5,13 +5,14 @@ Thank you for your interest in contributing to `vite-mix`.
 ## Getting started
 
 1. Install [pre-commit](https://pre-commit.com/#install) if you don't have it:
+
    ```bash
    brew install pre-commit
    ```
 
 2. Clone and install dependencies:
    ```bash
-   git clone https://github.com/hugoboss17/laravel-vite-mix.git
+   git clone https://github.com/hugoboss17/vite-mix.git
    cd vite-mix
    npm install
    ```
@@ -33,9 +34,9 @@ npm test         # build + run tests
 
 ## Reporting issues
 
-Use [GitHub Issues](https://github.com/hugoboss17/laravel-vite-mix/issues) for bugs and feature requests.
+Use [GitHub Issues](https://github.com/hugoboss17/vite-mix/issues) for bugs and feature requests.
 
-For security vulnerabilities, use [GitHub private vulnerability reporting](https://github.com/hugoboss17/laravel-vite-mix/security/advisories/new) instead of opening a public issue.
+For security vulnerabilities, use [GitHub private vulnerability reporting](https://github.com/hugoboss17/vite-mix/security/advisories/new) instead of opening a public issue.
 
 ## Code style
 

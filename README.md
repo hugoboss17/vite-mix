@@ -3,9 +3,9 @@
 [![npm version](https://img.shields.io/npm/v/vite-mix)](https://www.npmjs.com/package/vite-mix)
 [![npm downloads](https://img.shields.io/npm/dt/vite-mix)](https://www.npmjs.com/package/vite-mix)
 [![License: ISC](https://img.shields.io/badge/license-ISC-blue)](LICENSE)
-[![CI](https://github.com/hugoboss17/laravel-vite-mix/actions/workflows/ci.yml/badge.svg)](https://github.com/hugoboss17/laravel-vite-mix/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/hugoboss17/laravel-vite-mix/graph/badge.svg)](https://codecov.io/gh/hugoboss17/laravel-vite-mix)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hugoboss17/laravel-vite-mix/badge)](https://scorecard.dev/viewer/?uri=github.com/hugoboss17/laravel-vite-mix)
+[![CI](https://github.com/hugoboss17/vite-mix/actions/workflows/ci.yml/badge.svg)](https://github.com/hugoboss17/vite-mix/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/hugoboss17/vite-mix/graph/badge.svg)](https://codecov.io/gh/hugoboss17/vite-mix)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hugoboss17/vite-mix/badge)](https://scorecard.dev/viewer/?uri=github.com/hugoboss17/vite-mix)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12098/badge)](https://www.bestpractices.dev/projects/12098)
 [![SLSA Level 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
 [![Socket Badge](https://socket.dev/api/badge/npm/package/vite-mix)](https://socket.dev/npm/package/vite-mix)
@@ -50,13 +50,16 @@ const graph = mix()
   .autoload({ jquery: ["$", "jQuery", "window.jQuery"] })
   .toGraph();
 
-export default defineConfig(async ({ mode }) => await viteConfigFromGraph(graph, mode));
+export default defineConfig(
+  async ({ mode }) => await viteConfigFromGraph(graph, mode),
+);
 ```
 
 If you need to set the mode manually (e.g. outside Vite):
 
 ```js
-const mode = process.env.NODE_ENV === "production" ? "production" : "development";
+const mode =
+  process.env.NODE_ENV === "production" ? "production" : "development";
 await viteConfigFromGraph(graph, mode);
 ```
 
@@ -82,19 +85,19 @@ npm run dev      # dev server
 
 ## Supported API
 
-| Method                              | Description                                                 |
-| ----------------------------------- | ----------------------------------------------------------- |
-| `mix()`                             | Create a new Mix instance                                   |
-| `.setPublicPath(path)`              | Output directory (default: `"public"`)                      |
-| `.js(src, dest)`                    | JavaScript/TypeScript entry point                           |
-| `.vue()`                            | Enable Vue 3                                                |
-| `.sass(src, dest)`                  | Sass/SCSS entry point                                       |
-| `.css(src, dest)`                   | Plain CSS entry point                                       |
-| `.copy(src, dest)`                  | Copy a file to the output directory                         |
-| `.copyDirectory(src, dest)`         | Copy a directory to the output directory                    |
-| `.autoload(map)`                    | Inject globals (e.g. jQuery, Lodash)                        |
-| `.toGraph()`                        | Returns the build graph (pass to `viteConfigFromGraph`)     |
-| `viteConfigFromGraph(graph, mode)`  | Returns a Vite `InlineConfig` (`mode` from Vite's `defineConfig`) |
+| Method                             | Description                                                       |
+| ---------------------------------- | ----------------------------------------------------------------- |
+| `mix()`                            | Create a new Mix instance                                         |
+| `.setPublicPath(path)`             | Output directory (default: `"public"`)                            |
+| `.js(src, dest)`                   | JavaScript/TypeScript entry point                                 |
+| `.vue()`                           | Enable Vue 3                                                      |
+| `.sass(src, dest)`                 | Sass/SCSS entry point                                             |
+| `.css(src, dest)`                  | Plain CSS entry point                                             |
+| `.copy(src, dest)`                 | Copy a file to the output directory                               |
+| `.copyDirectory(src, dest)`        | Copy a directory to the output directory                          |
+| `.autoload(map)`                   | Inject globals (e.g. jQuery, Lodash)                              |
+| `.toGraph()`                       | Returns the build graph (pass to `viteConfigFromGraph`)           |
+| `viteConfigFromGraph(graph, mode)` | Returns a Vite `InlineConfig` (`mode` from Vite's `defineConfig`) |
 
 ## Examples
 
@@ -109,7 +112,9 @@ const graph = mix()
   .js("resources/assets/js/app.js", "public/js")
   .toGraph();
 
-export default defineConfig(async ({ mode }) => await viteConfigFromGraph(graph, mode));
+export default defineConfig(
+  async ({ mode }) => await viteConfigFromGraph(graph, mode),
+);
 ```
 
 ### Sass / CSS
@@ -180,7 +185,9 @@ const graph = mix()
   .copyDirectory("resources/assets/fonts", "public/fonts")
   .toGraph();
 
-export default defineConfig(async ({ mode }) => await viteConfigFromGraph(graph, mode));
+export default defineConfig(
+  async ({ mode }) => await viteConfigFromGraph(graph, mode),
+);
 ```
 
 ## Webpack compatibility handled

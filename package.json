@@ -17,10 +17,10 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hugoboss17/laravel-vite-mix.git"
+    "url": "https://github.com/hugoboss17/vite-mix.git"
   },
   "bugs": {
-    "url": "https://github.com/hugoboss17/laravel-vite-mix/issues"
+    "url": "https://github.com/hugoboss17/vite-mix/issues"
   },
   "type": "module",
   "module": "./dist/index.js",
