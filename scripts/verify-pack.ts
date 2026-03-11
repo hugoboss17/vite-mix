@@ -38,7 +38,7 @@ function isAllowed(filePath: string): boolean {
 
 const raw = execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
   env: (() => {
-    const cacheDir = process.env.NPM_CONFIG_CACHE || path.join(os.tmpdir(), "npm-cache-laravel-vite-mix");
+    const cacheDir = process.env.NPM_CONFIG_CACHE || path.join(os.tmpdir(), "npm-cache-vite-mix");
     mkdirSync(cacheDir, { recursive: true });
     return {
       ...process.env,

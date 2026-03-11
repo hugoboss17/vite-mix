@@ -3,7 +3,7 @@
   "release-type": "node",
   "packages": {
     ".": {
-      "package-name": "laravel-vite-mix",
+      "package-name": "vite-mix",
       "changelog-path": "CHANGELOG.md"
     }
   }

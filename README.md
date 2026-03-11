@@ -1,14 +1,14 @@
-# laravel-vite-mix
+# vite-mix
 
-[![npm version](https://img.shields.io/npm/v/laravel-vite-mix)](https://www.npmjs.com/package/laravel-vite-mix)
-[![npm downloads](https://img.shields.io/npm/dt/laravel-vite-mix)](https://www.npmjs.com/package/laravel-vite-mix)
+[![npm version](https://img.shields.io/npm/v/vite-mix)](https://www.npmjs.com/package/vite-mix)
+[![npm downloads](https://img.shields.io/npm/dt/vite-mix)](https://www.npmjs.com/package/vite-mix)
 [![License: ISC](https://img.shields.io/badge/license-ISC-blue)](LICENSE)
 [![CI](https://github.com/hugoboss17/laravel-vite-mix/actions/workflows/ci.yml/badge.svg)](https://github.com/hugoboss17/laravel-vite-mix/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/hugoboss17/laravel-vite-mix/graph/badge.svg)](https://codecov.io/gh/hugoboss17/laravel-vite-mix)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hugoboss17/laravel-vite-mix/badge)](https://scorecard.dev/viewer/?uri=github.com/hugoboss17/laravel-vite-mix)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12098/badge)](https://www.bestpractices.dev/projects/12098)
 [![SLSA Level 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
-[![Socket Badge](https://socket.dev/api/badge/npm/package/laravel-vite-mix)](https://socket.dev/npm/package/laravel-vite-mix)
+[![Socket Badge](https://socket.dev/api/badge/npm/package/vite-mix)](https://socket.dev/npm/package/vite-mix)
 
 Use Vite with a Laravel Mix-like API.
 
@@ -19,7 +19,7 @@ Laravel Mix is no longer maintained. This package helps migrate legacy Mix-style
 ## Install
 
 ```bash
-npm install laravel-vite-mix
+npm install vite-mix
 ```
 
 Peer dependencies (install only what you need):
@@ -37,7 +37,7 @@ Replace your `webpack.mix.js` with `vite.config.js` with a Mix-style definition:
 ```js
 // vite.config.js
 import { defineConfig } from "vite";
-import { mix, viteConfigFromGraph } from "laravel-vite-mix";
+import { mix, viteConfigFromGraph } from "vite-mix";
 
 const graph = mix()
   .setPublicPath("public")
@@ -102,7 +102,7 @@ npm run dev      # dev server
 
 ```js
 import { defineConfig } from "vite";
-import { mix, viteConfigFromGraph } from "laravel-vite-mix";
+import { mix, viteConfigFromGraph } from "vite-mix";
 
 const graph = mix()
   .setPublicPath("public")
@@ -164,7 +164,7 @@ mix()
 ```js
 // vite.config.js
 import { defineConfig } from "vite";
-import { mix, viteConfigFromGraph } from "laravel-vite-mix";
+import { mix, viteConfigFromGraph } from "vite-mix";
 
 const graph = mix()
   .setPublicPath("public")
