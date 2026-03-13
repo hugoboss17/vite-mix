@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/hugoboss17/vite-mix/compare/vite-mix-v0.7.4...vite-mix-v0.8.0) (2026-03-13)
+
+
+### Features
+
+* minimum requirement vite 8 ([#63](https://github.com/hugoboss17/vite-mix/issues/63)) ([4d94f06](https://github.com/hugoboss17/vite-mix/commit/4d94f06f657a7fb07e604e4f903fbd4872437589))
+
 ## [0.7.4](https://github.com/hugoboss17/vite-mix/compare/vite-mix-v0.7.3...vite-mix-v0.7.4) (2026-03-11)
 
 
