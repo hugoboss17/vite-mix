@@ -22,10 +22,19 @@ interface PackResult {
 function parsePackJson(raw: string): PackResult {
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      fail("unexpected npm pack --json output.");
+
+    if (Array.isArray(parsed)) {
+      if (parsed.length === 0) fail("unexpected npm pack --json output.");
+      return parsed[0] as PackResult;
     }
-    return (parsed as PackResult[])[0];
+
+    if (parsed && typeof parsed === "object") {
+      const entries = Object.values(parsed as Record<string, PackResult>);
+      if (entries.length === 0) fail("unexpected npm pack --json output.");
+      return entries[0];
+    }
+
+    fail("unexpected npm pack --json output.");
   } catch (error) {
     fail(`unable to parse npm pack output: ${error instanceof Error ? error.message : String(error)}`);
   }
