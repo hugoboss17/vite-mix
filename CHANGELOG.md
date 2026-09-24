@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.4](https://github.com/hugoboss17/vite-mix/compare/vite-mix-v0.8.3...vite-mix-v0.8.4) (2026-09-24)
+
+
+### Bug Fixes
+
+* build ([#153](https://github.com/hugoboss17/vite-mix/issues/153)) ([fa41b0e](https://github.com/hugoboss17/vite-mix/commit/fa41b0e20a6c4be153c7792501f99733f87da49f))
+
 ## [0.8.3](https://github.com/hugoboss17/vite-mix/compare/vite-mix-v0.8.2...vite-mix-v0.8.3) (2026-09-24)
 
 
