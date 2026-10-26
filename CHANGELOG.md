@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.8.5](https://github.com/hugoboss17/vite-mix/compare/vite-mix-v0.8.4...vite-mix-v0.8.5) (2026-10-26)
+
+### Maintenance
+
+* update dependencies and restore CodeQL scanning for JavaScript, TypeScript, and GitHub Actions
+
 ## [0.8.4](https://github.com/hugoboss17/vite-mix/compare/vite-mix-v0.8.3...vite-mix-v0.8.4) (2026-09-24)
 
 
